@@ -38,5 +38,6 @@ pub fn or_to_s(d: List(OrVal(a)), f: fn(a) -> String) -> String {
       OrEvery(v) -> every_to_s(v, f)
     }
   })
+  |> list.unique()
   |> string.join(",")
 }

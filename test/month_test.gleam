@@ -4,7 +4,7 @@ import field/month.{All, Any, Every, Or, Range, Uni}
 import field/types.{
   EveryAll, EveryRange, EveryUni, OrEvery, OrRange, OrUni, RangeVal,
 }
-import util/months.{MonthName, MonthNumber}
+import util/months
 
 pub fn main() {
   gleeunit.main()
@@ -19,11 +19,11 @@ pub fn to_s_test() {
   |> month.to_s()
   |> should.equal("?")
 
-  let a = MonthName("JAN")
-  let b = MonthName("MAR")
+  let assert Ok(a) = months.from_name("JAN")
+  let assert Ok(b) = months.from_name("MAR")
 
-  let c = MonthNumber(1)
-  let d = MonthNumber(3)
+  let assert Ok(c) = months.from_int(1)
+  let assert Ok(d) = months.from_int(3)
 
   let rab = RangeVal(a, b)
   let rcd = RangeVal(c, d)

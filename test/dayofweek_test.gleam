@@ -1,11 +1,12 @@
 import gleeunit
 import gleeunit/should
 import gleam/option.{None, Some}
-import field/dayofweek.{All, Any, Every, Index, Last, Or, Range, Uni}
-import util/weekday.{WeekdayName, WeekdayNumber}
-import field/types.{
-  EveryAll, EveryRange, EveryUni, OrEvery, OrRange, OrUni, RangeVal,
+import field/dayofweek.{
+  All, Any, Every, Index, Last, Or, OrEvery, OrIndex, OrLast, OrRange, OrUni,
+  Range, Uni,
 }
+import util/weekday
+import field/types.{EveryAll, EveryRange, EveryUni, RangeVal}
 
 pub fn main() {
   gleeunit.main()
@@ -20,10 +21,10 @@ pub fn to_s_test() {
   |> dayofweek.to_s()
   |> should.equal("*")
 
-  let a = WeekdayName("MON")
-  let b = WeekdayName("WED")
-  let c = WeekdayNumber(2)
-  let d = WeekdayNumber(4)
+  let assert Ok(a) = weekday.from_name("MON")
+  let assert Ok(b) = weekday.from_name("WED")
+  let assert Ok(c) = weekday.from_int(2)
+  let assert Ok(d) = weekday.from_int(4)
 
   let rab = RangeVal(a, b)
   let rcd = RangeVal(c, d)
@@ -64,14 +65,6 @@ pub fn to_s_test() {
   |> dayofweek.to_s()
   |> should.equal("2-4/2")
 
-  Or([OrUni(a), OrRange(rab), OrEvery(EveryRange(rab, 2))])
-  |> dayofweek.to_s()
-  |> should.equal("MON,MON-WED,MON-WED/2")
-
-  Or([OrUni(c), OrRange(rcd), OrEvery(EveryUni(c, 2))])
-  |> dayofweek.to_s()
-  |> should.equal("2,2-4,2/2")
-
   Index(3, a)
   |> dayofweek.to_s()
   |> should.equal("MON#3")
@@ -91,4 +84,24 @@ pub fn to_s_test() {
   Last(None)
   |> dayofweek.to_s()
   |> should.equal("L")
+
+  Or([
+    OrUni(a),
+    OrRange(rab),
+    OrEvery(EveryRange(rab, 2)),
+    OrIndex(1, a),
+    OrLast(Some(a)),
+  ])
+  |> dayofweek.to_s()
+  |> should.equal("MON,MON-WED,MON-WED/2,MON#1,MONL")
+
+  Or([
+    OrUni(c),
+    OrRange(rcd),
+    OrEvery(EveryUni(c, 2)),
+    OrIndex(1, c),
+    OrLast(Some(c)),
+  ])
+  |> dayofweek.to_s()
+  |> should.equal("2,2-4,2/2,2#1,2L")
 }

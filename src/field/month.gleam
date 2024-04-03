@@ -22,8 +22,6 @@ pub type FieldVal {
   // JAN-MAR/2
   Every(value: EveryVal(Month))
 
-  // 1,2
-  // 1-3,5
   // 1-3/2,5
   // JAN-MAR/2,MAY
   Or(value: List(OrVal(Month)))
