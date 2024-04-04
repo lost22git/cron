@@ -52,10 +52,10 @@ fn last_to_s(d: Option(Int)) -> String {
   }
 }
 
-/// create **All**
+/// create **All** `*`
 ///
 /// ```gleam
-/// let assert Ok(fieldVal) = all()
+/// let fieldVal = all()
 /// to_s(fieldVal) // *
 /// ```
 ///
@@ -63,10 +63,10 @@ pub fn all() -> FieldVal {
   All
 }
 
-/// create **Any**
+/// create **Any** `?`
 ///
 /// ```gleam
-/// let assert Ok(fieldVal) = any()
+/// let fieldVal = any()
 /// to_s(fieldVal) // ?
 /// ```
 ///
@@ -77,61 +77,42 @@ pub fn any() -> FieldVal {
 /// create **Uni**
 ///
 /// ```gleam
-/// let assert Ok(fieldVal) = uni(1)
+/// let fieldVal = uni(1)
 /// to_s(fieldVal) // 1
 /// ```
 ///
-pub fn uni(day: Int) -> Result(FieldVal, String) {
-  case 1 <= day, day <= 31 {
-    True, True -> Ok(Uni(day))
-    _, _ -> Error("`" <> int.to_string(day) <> "`" <> " must in [1,31]")
-  }
+pub fn uni(day: Int) -> FieldVal {
+  Uni(day)
 }
 
 /// create **Range** `-`
 ///
 /// ```gleam
-/// let assert Ok(fieldVal) = range(1, 4)
+/// let fieldVal = range(1, 4)
 /// to_s(fieldVal) // 1-4
 /// ```
 ///
-pub fn range(from: Int, to: Int) -> Result(FieldVal, String) {
-  let r = Range(RangeVal(from, to))
-
-  case 1 <= from, from <= to, to <= 31 {
-    True, True, True -> Ok(r)
-    _, _, _ -> Error("`" <> to_s(r) <> "`" <> " must in [1,31] and from <= to")
-  }
+pub fn range(from: Int, to: Int) -> FieldVal {
+  Range(RangeVal(from, to))
 }
 
 /// create **Last** `L`
 /// 
 /// ```gleam
-/// let assert Ok(fieldVal) = last(Some(1))
+/// let fieldVal = last(Some(1))
 /// to_s(fieldVal) // L-1
 /// ```
 ///
 /// ```gleam
-/// let assert Ok(fieldVal) = last(None)
+/// let fieldVal = last(None)
 /// to_s(fieldVal) // L
 /// ```
 ///
-pub fn last(day: Option(Int)) -> Result(FieldVal, String) {
-  case day {
-    None -> Ok(Last(None))
-    Some(v) -> {
-      let l = Last(Some(v))
-      case 1 <= v, v <= 30 {
-        True, True -> Ok(l)
-        _, _ -> {
-          Error("`" <> to_s(l) <> "`" <> " must in [1,30]")
-        }
-      }
-    }
-  }
+pub fn last(day: Option(Int)) -> FieldVal {
+  Last(day)
 }
 
-/// build an **Every** `FieldVal` from another `FieldVal`
+/// build an **Every** `/` from another `FieldVal`
 ///
 pub fn every(fval: FieldVal, step: Int) -> Result(FieldVal, String) {
   case fval {
@@ -142,7 +123,7 @@ pub fn every(fval: FieldVal, step: Int) -> Result(FieldVal, String) {
   }
 }
 
-/// build an **Or** `FieldVal` from list of `FieldVal`
+/// build an **Or** `,` from list of `FieldVal`
 ///
 pub fn or(fvals: List(FieldVal)) -> Result(FieldVal, String) {
   use or_vals <- try(

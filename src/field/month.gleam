@@ -44,10 +44,10 @@ pub fn to_s(d: FieldVal) -> String {
   }
 }
 
-/// create **All**
+/// create **All** `*`
 ///
 /// ```gleam
-/// let assert Ok(fieldVal) = all()
+/// let fieldVal = all()
 /// to_s(fieldVal) // *
 /// ```
 ///
@@ -55,10 +55,10 @@ pub fn all() -> FieldVal {
   All
 }
 
-/// create **Any**
+/// create **Any** `?`
 ///
 /// ```gleam
-/// let assert Ok(fieldVal) = any()
+/// let fieldVal = any()
 /// to_s(fieldVal) // ?
 /// ```
 ///
@@ -66,73 +66,32 @@ pub fn any() -> FieldVal {
   Any
 }
 
-/// create **Uni**
+/// create **Uni** 
 ///
 /// ```gleam
-/// let assert Ok(fieldVal) = uni(1)
+/// let assert Ok(m) = months.from_int(1)
+/// let fieldVal = uni(m)
 /// to_s(fieldVal) // 1
 /// ```
 ///
-pub fn uni(month: Int) -> Result(FieldVal, String) {
-  use m <- try(months.from_int(month))
-  Ok(Uni(m))
-}
-
-/// create **Uni**
-///
-/// ```gleam
-/// let assert Ok(fieldVal) = uni_name("JAN")
-/// to_s(fieldVal) // JAN
-/// ```
-///
-pub fn uni_name(month: String) -> Result(FieldVal, String) {
-  use m <- try(months.from_name(month))
-  Ok(Uni(m))
+pub fn uni(month: Month) -> FieldVal {
+  Uni(month)
 }
 
 /// create **Range** `-`
 ///
 /// ```gleam
-/// let assert Ok(fieldVal) = range(1, 4)
+/// let assert Ok(from) = months.from_int(1)
+/// let assert Ok(to) = months.from_int(4)
+/// let fieldVal = range(from, to)
 /// to_s(fieldVal) // 1-4
 /// ```
 ///
-pub fn range(from: Int, to: Int) -> Result(FieldVal, String) {
-  use from_m <- try(months.from_int(from))
-  use to_m <- try(months.from_int(to))
-
-  let r = Range(RangeVal(from_m, to_m))
-
-  case from <= to {
-    True -> Ok(r)
-    _ -> {
-      Error("`" <> to_s(r) <> "`" <> " must from <= to")
-    }
-  }
+pub fn range(from: Month, to: Month) -> FieldVal {
+  Range(RangeVal(from, to))
 }
 
-/// create **Range** `-`
-///
-/// ```gleam
-/// let assert Ok(fieldVal) = range_name("JAN", "MAR")
-/// to_s(fieldVal) // JAN-MAR
-/// ```
-///
-pub fn range_name(from: String, to: String) -> Result(FieldVal, String) {
-  use from_m <- try(months.from_name(from))
-  use to_m <- try(months.from_name(to))
-
-  let r = Range(RangeVal(from_m, to_m))
-
-  case months.compare(from_m, to_m) {
-    Lt | Eq -> Ok(r)
-    _ -> {
-      Error("`" <> to_s(r) <> "`" <> " must from <= to")
-    }
-  }
-}
-
-/// build an **Every** `FieldVal` from another `FieldVal`
+/// build an **Every** `/` from another `FieldVal`
 ///
 pub fn every(fval: FieldVal, step: Int) -> Result(FieldVal, String) {
   case fval {
@@ -143,7 +102,7 @@ pub fn every(fval: FieldVal, step: Int) -> Result(FieldVal, String) {
   }
 }
 
-/// build an **Or** `FieldVal` from list of `FieldVal`
+/// build an **Or** `,` from list of `FieldVal`
 ///
 pub fn or(fvals: List(FieldVal)) -> Result(FieldVal, String) {
   use or_vals <- try(
