@@ -1,6 +1,7 @@
 import gleam/int
 import gleam/list
 import gleam/string
+import gleam/order.{type Order}
 
 pub opaque type Month {
   MonthNumber(value: Int)
@@ -54,11 +55,15 @@ pub fn to_s(d: Month) -> String {
 /// | 11 | NOV |
 /// | 12 | DEC |
 ///
-pub fn from_int(value: Int) -> Result(Month, Nil) {
+pub fn from_int(value: Int) -> Result(Month, String) {
   let #(min, max) = int_range()
   case min <= value, value <= max {
     True, True -> Ok(MonthNumber(value))
-    _, _ -> Error(Nil)
+    _, _ -> {
+      let range_str =
+        "[" <> int.to_string(min) <> "," <> int.to_string(max) <> "]"
+      Error("`" <> int.to_string(value) <> "`" <> " must in " <> range_str)
+    }
   }
 }
 
@@ -79,11 +84,11 @@ pub fn from_int(value: Int) -> Result(Month, Nil) {
 /// | 11 | NOV |
 /// | 12 | DEC |
 ///
-pub fn from_name(str: String) -> Result(Month, Nil) {
-  let upcase = string.uppercase(str)
+pub fn from_name(name: String) -> Result(Month, String) {
+  let upcase = string.uppercase(name)
   case list.contains(names, upcase) {
     True -> Ok(MonthName(upcase))
-    False -> Error(Nil)
+    False -> Error("`" <> name <> "`" <> " is not a valid month name")
   }
 }
 
@@ -111,4 +116,10 @@ pub fn to_name(d: Month) -> String {
     }
     MonthName(v) -> v
   }
+}
+
+/// compare two `Month`
+///
+pub fn compare(a: Month, b: Month) -> Order {
+  int.compare(to_int(a), to_int(b))
 }

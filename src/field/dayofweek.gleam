@@ -2,7 +2,10 @@ import gleam/option.{type Option, None, Some}
 import gleam/int
 import gleam/list
 import gleam/string
-import field/types.{type EveryVal, type RangeVal, EveryAll, EveryRange, EveryUni}
+import gleam/order.{Eq, Lt}
+import field/types.{
+  type EveryVal, type RangeVal, EveryAll, EveryRange, EveryUni, RangeVal,
+}
 import util/weekday.{type Weekday}
 import gleam/result.{try}
 
@@ -84,6 +87,170 @@ fn last_to_s(d: Option(Weekday)) -> String {
   case d {
     Some(v) -> weekday.to_s(v) <> "L"
     None -> "L"
+  }
+}
+
+/// create **All**
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = all()
+/// to_s(fieldVal) // *
+/// ```
+///
+pub fn all() -> FieldVal {
+  All
+}
+
+/// create **Any**
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = any()
+/// to_s(fieldVal) // ?
+/// ```
+///
+pub fn any() -> FieldVal {
+  Any
+}
+
+/// create **Uni**
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = uni(1)
+/// to_s(fieldVal) // 1
+/// ```
+///
+pub fn uni(day: Int) -> Result(FieldVal, String) {
+  use wd <- try(weekday.from_int(day))
+  Ok(Uni(wd))
+}
+
+/// create **Uni**
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = uni_name("SUN")
+/// to_s(fieldVal) // SUN
+/// ```
+///
+pub fn uni_name(day: String) -> Result(FieldVal, String) {
+  use wd <- try(weekday.from_name(day))
+  Ok(Uni(wd))
+}
+
+/// create **Range** `-`
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = range(1, 4)
+/// to_s(fieldVal) // 1-4
+/// ```
+///
+pub fn range(from: Int, to: Int) -> Result(FieldVal, String) {
+  use from_wd <- try(weekday.from_int(from))
+  use to_wd <- try(weekday.from_int(to))
+
+  let r = Range(RangeVal(from_wd, to_wd))
+
+  case from <= to {
+    True -> Ok(r)
+    _ -> Error("`" <> to_s(r) <> "`" <> " must from <= to")
+  }
+}
+
+/// create **Range** `-`
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = range_name("SUN", "WED")
+/// to_s(fieldVal) // SUN-WED
+/// ```
+///
+pub fn range_name(from: String, to: String) -> Result(FieldVal, String) {
+  use from_wd <- try(weekday.from_name(from))
+  use to_wd <- try(weekday.from_name(to))
+
+  let r = Range(RangeVal(from_wd, to_wd))
+
+  case weekday.compare(from_wd, to_wd) {
+    Lt | Eq -> Ok(r)
+    _ -> Error("`" <> to_s(r) <> "`" <> " must from <= to")
+  }
+}
+
+/// create **Index** (aka Hash) `#`
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = index(2, 1)
+/// to_s(fieldVal) // 1#2
+/// ```
+///
+pub fn index(index: Int, day: Int) -> Result(FieldVal, String) {
+  use wd <- try(weekday.from_int(day))
+
+  let i = Index(index, wd)
+
+  case 0 < index, index < 6 {
+    True, True -> Ok(i)
+    _, _ -> Error("`" <> to_s(i) <> "`" <> " index must in (0,6)")
+  }
+}
+
+/// create **Index** (aka Hash) `#`
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = index_name(2,"SUN")
+/// to_s(fieldVal) // SUN#2
+/// ```
+///
+pub fn index_name(index: Int, day: String) -> Result(FieldVal, String) {
+  use wd <- try(weekday.from_name(day))
+
+  let i = Index(index, wd)
+
+  case 0 < index, index < 6 {
+    True, True -> Ok(i)
+    _, _ -> Error("`" <> to_s(i) <> "`" <> " index must in (0,6)")
+  }
+}
+
+/// create **Last** `L`
+/// 
+/// ```gleam
+/// let assert Ok(fieldVal) = last(Some(1))
+/// to_s(fieldVal) // 1L
+/// ```
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = last(None)
+/// to_s(fieldVal) // L
+/// ```
+///
+pub fn last(day: Option(Int)) -> Result(FieldVal, String) {
+  case day {
+    None -> Ok(Last(None))
+    Some(v) -> {
+      use wd <- try(weekday.from_int(v))
+      Ok(Last(Some(wd)))
+    }
+  }
+}
+
+/// create **Last** `L`
+/// 
+/// ```gleam
+/// let assert Ok(fieldVal) = last_name(Some("SUN"))
+/// to_s(fieldVal) // SUNL
+/// ```
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = last_name(None)
+/// to_s(fieldVal) // L
+/// ```
+///
+pub fn last_name(day: Option(String)) -> Result(FieldVal, String) {
+  case day {
+    None -> Ok(Last(None))
+    Some(v) -> {
+      use wd <- try(weekday.from_name(v))
+      Ok(Last(Some(wd)))
+    }
   }
 }
 

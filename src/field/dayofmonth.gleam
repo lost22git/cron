@@ -4,7 +4,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/result.{try}
 import field/types.{
   type EveryVal, type OrVal, type RangeVal, EveryAll, EveryRange, EveryUni,
-  OrEvery, OrRange, OrUni,
+  OrEvery, OrRange, OrUni, RangeVal,
 }
 
 pub type FieldVal {
@@ -49,6 +49,85 @@ fn last_to_s(d: Option(Int)) -> String {
   case d {
     None -> "L"
     Some(v) -> "L" <> "-" <> int.to_string(v)
+  }
+}
+
+/// create **All**
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = all()
+/// to_s(fieldVal) // *
+/// ```
+///
+pub fn all() -> FieldVal {
+  All
+}
+
+/// create **Any**
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = any()
+/// to_s(fieldVal) // ?
+/// ```
+///
+pub fn any() -> FieldVal {
+  Any
+}
+
+/// create **Uni**
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = uni(1)
+/// to_s(fieldVal) // 1
+/// ```
+///
+pub fn uni(day: Int) -> Result(FieldVal, String) {
+  case 1 <= day, day <= 31 {
+    True, True -> Ok(Uni(day))
+    _, _ -> Error("`" <> int.to_string(day) <> "`" <> " must in [1,31]")
+  }
+}
+
+/// create **Range** `-`
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = range(1, 4)
+/// to_s(fieldVal) // 1-4
+/// ```
+///
+pub fn range(from: Int, to: Int) -> Result(FieldVal, String) {
+  let r = Range(RangeVal(from, to))
+
+  case 1 <= from, from <= to, to <= 31 {
+    True, True, True -> Ok(r)
+    _, _, _ -> Error("`" <> to_s(r) <> "`" <> " must in [1,31] and from <= to")
+  }
+}
+
+/// create **Last** `L`
+/// 
+/// ```gleam
+/// let assert Ok(fieldVal) = last(Some(1))
+/// to_s(fieldVal) // L-1
+/// ```
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = last(None)
+/// to_s(fieldVal) // L
+/// ```
+///
+pub fn last(day: Option(Int)) -> Result(FieldVal, String) {
+  case day {
+    None -> Ok(Last(None))
+    Some(v) -> {
+      let l = Last(Some(v))
+      case 1 <= v, v <= 30 {
+        True, True -> Ok(l)
+        _, _ -> {
+          Error("`" <> to_s(l) <> "`" <> " must in [1,30]")
+        }
+      }
+    }
   }
 }
 

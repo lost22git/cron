@@ -1,6 +1,7 @@
 import gleam/int
 import gleam/string
 import gleam/list
+import gleam/order.{type Order}
 
 pub opaque type Weekday {
   WeekdayNumber(value: Int)
@@ -46,11 +47,15 @@ pub fn to_s(d: Weekday) -> String {
 /// | 6 | FRI |
 /// | 7 | SAT |
 ///
-pub fn from_int(value: Int) -> Result(Weekday, Nil) {
+pub fn from_int(value: Int) -> Result(Weekday, String) {
   let #(min, max) = int_range()
   case min <= value, value <= max {
     True, True -> Ok(WeekdayNumber(value))
-    _, _ -> Error(Nil)
+    _, _ -> {
+      let range_str =
+        "[" <> int.to_string(min) <> "," <> int.to_string(max) <> "]"
+      Error("`" <> int.to_string(value) <> "`" <> " must in " <> range_str)
+    }
   }
 }
 
@@ -66,11 +71,11 @@ pub fn from_int(value: Int) -> Result(Weekday, Nil) {
 /// | 6 | FRI |
 /// | 7 | SAT |
 ///
-pub fn from_name(str: String) -> Result(Weekday, Nil) {
-  let upcase = string.uppercase(str)
+pub fn from_name(name: String) -> Result(Weekday, String) {
+  let upcase = string.uppercase(name)
   case list.contains(names, upcase) {
     True -> Ok(WeekdayName(upcase))
-    False -> Error(Nil)
+    False -> Error("`" <> name <> "`" <> " is not a valid weekday name")
   }
 }
 
@@ -98,4 +103,10 @@ pub fn to_name(d: Weekday) -> String {
     }
     WeekdayName(v) -> v
   }
+}
+
+/// compare two `Weekday`
+///
+pub fn compare(a: Weekday, b: Weekday) -> Order {
+  int.compare(to_int(a), to_int(b))
 }

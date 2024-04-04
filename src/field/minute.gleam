@@ -3,7 +3,7 @@ import gleam/list
 import gleam/result.{try}
 import field/types.{
   type EveryVal, type OrVal, type RangeVal, EveryAll, EveryRange, EveryUni,
-  OrEvery, OrRange, OrUni,
+  OrEvery, OrRange, OrUni, RangeVal,
 }
 
 pub type FieldVal {
@@ -36,6 +36,58 @@ pub fn to_s(d: FieldVal) -> String {
     Range(v) -> types.range_to_s(v, int.to_string)
     Every(v) -> types.every_to_s(v, int.to_string)
     Or(v) -> types.or_to_s(v, int.to_string)
+  }
+}
+
+/// create **All**
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = all()
+/// to_s(fieldVal) // *
+/// ```
+///
+pub fn all() -> FieldVal {
+  All
+}
+
+/// create **Any**
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = any()
+/// to_s(fieldVal) // ?
+/// ```
+///
+pub fn any() -> FieldVal {
+  Any
+}
+
+/// create **Uni**
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = uni(1)
+/// to_s(fieldVal) // 1
+/// ```
+///
+pub fn uni(minute: Int) -> Result(FieldVal, String) {
+  case 0 <= minute, minute <= 59 {
+    True, True -> Ok(Uni(minute))
+    _, _ -> Error("`" <> int.to_string(minute) <> "`" <> " must in [0,59]")
+  }
+}
+
+/// create **Range** `-`
+///
+/// ```gleam
+/// let assert Ok(fieldVal) = range(1, 4)
+/// to_s(fieldVal) // 1-4
+/// ```
+///
+pub fn range(from: Int, to: Int) -> Result(FieldVal, String) {
+  let r = Range(RangeVal(from, to))
+
+  case 0 <= from, from <= to, to <= 59 {
+    True, True, True -> Ok(r)
+    _, _, _ -> Error("`" <> to_s(r) <> "`" <> " must in [0,59] and from <= to")
   }
 }
 
