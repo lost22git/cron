@@ -2,6 +2,7 @@ import gleam/int
 import gleam/string
 import gleam/list
 import gleam/order.{type Order}
+import util/range
 
 pub opaque type Weekday {
   WeekdayNumber(value: Int)
@@ -12,10 +13,11 @@ pub opaque type Weekday {
 ///
 pub const names = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
-/// get `#(min, max)` of `Weekday`
+/// get `Range` of `Weekday`
 ///
-pub fn int_range() -> #(Int, Int) {
-  #(1, list.length(names))
+pub fn int_range() -> range.Range(Int) {
+  // #(1, list.length(names))
+  range.close_close(1, list.length(names))
 }
 
 /// `Weekday` to string
@@ -48,13 +50,17 @@ pub fn to_s(d: Weekday) -> String {
 /// | 7 | SAT |
 ///
 pub fn from_int(value: Int) -> Result(Weekday, String) {
-  let #(min, max) = int_range()
-  case min <= value, value <= max {
-    True, True -> Ok(WeekdayNumber(value))
-    _, _ -> {
-      let range_str =
-        "[" <> int.to_string(min) <> "," <> int.to_string(max) <> "]"
-      Error("`" <> int.to_string(value) <> "`" <> " must in " <> range_str)
+  let r = int_range()
+  case range.include(r, value, int.compare) {
+    True -> Ok(WeekdayNumber(value))
+    _ -> {
+      Error(
+        "`"
+        <> int.to_string(value)
+        <> "`"
+        <> " must in "
+        <> range.to_s(r, int.to_string),
+      )
     }
   }
 }

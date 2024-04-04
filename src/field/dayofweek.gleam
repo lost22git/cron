@@ -8,6 +8,7 @@ import field/types.{
 }
 import util/weekday.{type Weekday}
 import gleam/result.{try}
+import util/range
 
 pub type FieldVal {
   // ?
@@ -186,9 +187,17 @@ pub fn index(index: Int, day: Int) -> Result(FieldVal, String) {
 
   let i = Index(index, wd)
 
-  case 0 < index, index < 6 {
-    True, True -> Ok(i)
-    _, _ -> Error("`" <> to_s(i) <> "`" <> " index must in (0,6)")
+  let index_range = range.open_open(0, 6)
+  case range.include(index_range, index, int.compare) {
+    True -> Ok(i)
+    _ ->
+      Error(
+        "`"
+        <> to_s(i)
+        <> "`"
+        <> " index must in "
+        <> range.to_s(index_range, int.to_string),
+      )
   }
 }
 
@@ -204,9 +213,17 @@ pub fn index_name(index: Int, day: String) -> Result(FieldVal, String) {
 
   let i = Index(index, wd)
 
-  case 0 < index, index < 6 {
-    True, True -> Ok(i)
-    _, _ -> Error("`" <> to_s(i) <> "`" <> " index must in (0,6)")
+  let index_range = range.open_open(0, 6)
+  case range.include(index_range, index, int.compare) {
+    True -> Ok(i)
+    _ ->
+      Error(
+        "`"
+        <> to_s(i)
+        <> "`"
+        <> " index must in "
+        <> range.to_s(index_range, int.to_string),
+      )
   }
 }
 
