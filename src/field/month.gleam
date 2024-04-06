@@ -1,11 +1,12 @@
 import util/months.{type Month}
 import gleam/list
 import gleam/result.{try}
-import gleam/order.{Eq, Lt}
-import field/types.{
-  type EveryVal, type OrVal, type RangeVal, EveryAll, EveryRange, EveryUni,
-  OrEvery, OrRange, OrUni, RangeVal,
+import gleam/option.{None}
+import field/common.{
+  type EveryVal, type FieldDef, type OrVal, type RangeVal, EveryAll, EveryRange,
+  EveryUni, FieldDef, OrEvery, OrRange, OrUni, RangeVal,
 }
+import util/range
 
 pub type FieldVal {
   // ?
@@ -38,9 +39,9 @@ pub fn to_s(d: FieldVal) -> String {
     Any -> "?"
     All -> "*"
     Uni(v) -> months.to_s(v)
-    Range(v) -> types.range_to_s(v, months.to_s)
-    Every(v) -> types.every_to_s(v, months.to_s)
-    Or(v) -> types.or_to_s(v, months.to_s)
+    Range(v) -> common.to_s_range(v, months.to_s)
+    Every(v) -> common.to_s_every(v, months.to_s)
+    Or(v) -> common.to_s_or(v, months.to_s)
   }
 }
 
@@ -116,4 +117,32 @@ pub fn or(fvals: List(FieldVal)) -> Result(FieldVal, String) {
     }),
   )
   Ok(Or(or_vals))
+}
+
+/// get `FieldDef`
+///
+pub fn get_field_def() -> FieldDef(Month) {
+  FieldDef(
+    value_range: months.range(),
+    value_compare: months.compare,
+    value_to_s: months.to_s,
+    every_step_range: range.close_close(1, list.length(months.names)),
+    index_range: None,
+    last_range: None,
+  )
+}
+
+/// validate `FieldVal`
+/// 
+pub fn validate(field_val: FieldVal) -> Result(FieldVal, List(String)) {
+  let field_def = get_field_def()
+  case field_val {
+    All | Any -> Ok(Nil)
+    Uni(v) -> common.validate_uni(v, field_def)
+    Range(v) -> common.validate_range(v, field_def)
+    Every(v) -> common.validate_every(v, field_def)
+    Or(v) -> common.validate_or(v, field_def)
+  }
+  |> result.map(fn(_) { field_val })
+  |> result.map_error(fn(errors) { [to_s(field_val), ..errors] })
 }

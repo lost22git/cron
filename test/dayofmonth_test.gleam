@@ -2,7 +2,7 @@ import gleeunit
 import gleeunit/should
 import gleam/option.{None, Some}
 import field/dayofmonth.{All, Any, Every, Last, Or, Range, Uni}
-import field/types.{
+import field/common.{
   EveryAll, EveryRange, EveryUni, OrEvery, OrRange, OrUni, RangeVal,
 }
 

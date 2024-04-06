@@ -15,8 +15,15 @@ pub const names = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
 /// get `Range` of `Weekday`
 ///
+pub fn range() -> range.Range(Weekday) {
+  let assert Ok(from) = from_int(1)
+  let assert Ok(to) = from_int(list.length(names))
+  range.close_close(from, to)
+}
+
+/// get int `Range` of `Weekday`
+///
 pub fn int_range() -> range.Range(Int) {
-  // #(1, list.length(names))
   range.close_close(1, list.length(names))
 }
 

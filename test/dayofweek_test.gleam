@@ -6,7 +6,7 @@ import field/dayofweek.{
   Range, Uni,
 }
 import util/weekday
-import field/types.{EveryAll, EveryRange, EveryUni, RangeVal}
+import field/common.{EveryAll, EveryRange, EveryUni, RangeVal}
 
 pub fn main() {
   gleeunit.main()

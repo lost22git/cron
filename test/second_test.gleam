@@ -1,7 +1,7 @@
 import gleeunit
 import gleeunit/should
 import field/second.{All, Any, Every, Or, Range, Uni}
-import field/types.{
+import field/common.{
   EveryAll, EveryRange, EveryUni, OrEvery, OrRange, OrUni, RangeVal,
 }
 

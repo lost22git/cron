@@ -6,10 +6,10 @@ import field/dayofmonth
 import field/month
 import field/dayofweek
 import field/year
-import field/types
+import field/common
 
 pub fn main() {
-  io.debug(types.RangeVal(from: 1, to: 10))
+  io.debug(common.RangeVal(from: 1, to: 10))
 }
 
 pub type Cron {

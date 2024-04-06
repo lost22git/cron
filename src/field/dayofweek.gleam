@@ -2,11 +2,21 @@ import gleam/option.{type Option, None, Some}
 import gleam/int
 import gleam/list
 import gleam/string
-import field/types.{
-  type EveryVal, type RangeVal, EveryAll, EveryRange, EveryUni, RangeVal,
+import field/common.{
+  type EveryVal, type FieldDef, type RangeVal, EveryAll, EveryRange, EveryUni,
+  FieldDef, RangeVal,
 }
 import util/weekday.{type Weekday}
+import util/range
 import gleam/result.{try}
+
+pub type OrValForDayOfWeek {
+  OrUni(value: Weekday)
+  OrRange(value: RangeVal(Weekday))
+  OrEvery(value: EveryVal(Weekday))
+  OrIndex(index: Int, value: Weekday)
+  OrLast(value: Option(Weekday))
+}
 
 pub type FieldVal {
   // ?
@@ -43,46 +53,38 @@ pub type FieldVal {
   Or(value: List(OrValForDayOfWeek))
 }
 
-pub type OrValForDayOfWeek {
-  OrUni(value: Weekday)
-  OrRange(value: RangeVal(Weekday))
-  OrEvery(value: EveryVal(Weekday))
-  OrIndex(index: Int, value: Weekday)
-  OrLast(value: Option(Weekday))
-}
-
 pub fn to_s(d: FieldVal) -> String {
   case d {
     Any -> "?"
     All -> "*"
     Uni(v) -> weekday.to_s(v)
-    Range(v) -> types.range_to_s(v, weekday.to_s)
-    Every(v) -> types.every_to_s(v, weekday.to_s)
-    Index(i, v) -> index_to_s(i, v)
-    Last(v) -> last_to_s(v)
-    Or(v) -> or_to_s(v, weekday.to_s)
+    Range(v) -> common.to_s_range(v, weekday.to_s)
+    Every(v) -> common.to_s_every(v, weekday.to_s)
+    Index(i, v) -> to_s_index(i, v)
+    Last(v) -> to_s_last(v)
+    Or(v) -> to_s_or(v, weekday.to_s)
   }
 }
 
-fn or_to_s(d: List(OrValForDayOfWeek), f: fn(Weekday) -> String) -> String {
+fn to_s_or(d: List(OrValForDayOfWeek), f: fn(Weekday) -> String) -> String {
   list.map(d, fn(dd) {
     case dd {
       OrUni(v) -> f(v)
-      OrRange(v) -> types.range_to_s(v, f)
-      OrEvery(v) -> types.every_to_s(v, f)
-      OrIndex(i, v) -> index_to_s(i, v)
-      OrLast(v) -> last_to_s(v)
+      OrRange(v) -> common.to_s_range(v, f)
+      OrEvery(v) -> common.to_s_every(v, f)
+      OrIndex(i, v) -> to_s_index(i, v)
+      OrLast(v) -> to_s_last(v)
     }
   })
   |> list.unique()
   |> string.join(",")
 }
 
-fn index_to_s(i: Int, d: Weekday) -> String {
+fn to_s_index(i: Int, d: Weekday) -> String {
   weekday.to_s(d) <> "#" <> int.to_string(i)
 }
 
-fn last_to_s(d: Option(Weekday)) -> String {
+fn to_s_last(d: Option(Weekday)) -> String {
   case d {
     Some(v) -> weekday.to_s(v) <> "L"
     None -> "L"
@@ -194,10 +196,68 @@ pub fn or(fvals: List(FieldVal)) -> Result(FieldVal, String) {
   Ok(Or(or_vals))
 }
 
-pub fn valiate(field_val: FieldVal) {
-  todo
+/// get `FieldDef`
+///
+pub fn get_field_def() -> FieldDef(Weekday) {
+  FieldDef(
+    value_range: weekday.range(),
+    value_compare: weekday.compare,
+    value_to_s: weekday.to_s,
+    every_step_range: range.close_close(1, list.length(weekday.names)),
+    index_range: Some(range.close_close(1, 5)),
+    last_range: None,
+  )
 }
 
-pub fn from_s(expr: String) {
-  todo
+/// validate `FieldVal`
+/// 
+pub fn validate(field_val: FieldVal) -> Result(FieldVal, List(String)) {
+  let field_def = get_field_def()
+  case field_val {
+    All | Any -> Ok(Nil)
+    Uni(_) -> Ok(Nil)
+    Range(v) -> common.validate_range(v, field_def)
+    Every(v) -> common.validate_every(v, field_def)
+    Index(i, _) -> validate_index(i, field_def)
+    Last(_) -> Ok(Nil)
+    Or(v) -> validate_or(v, field_def)
+  }
+  |> result.map(fn(_) { field_val })
+  |> result.map_error(fn(errors) { [to_s(field_val), ..errors] })
+}
+
+fn validate_index(
+  index: Int,
+  field_def: FieldDef(Weekday),
+) -> Result(Nil, List(String)) {
+  let assert Some(index_range) = field_def.index_range
+  case range.include(index_range, index, int.compare) {
+    True -> Ok(Nil)
+    False -> Error(["index must " <> range.to_s(index_range, int.to_string)])
+  }
+}
+
+fn validate_or(
+  or_vals: List(OrValForDayOfWeek),
+  field_def: FieldDef(Weekday),
+) -> Result(Nil, List(String)) {
+  let fold_errors =
+    list.fold(or_vals, [], fn(acc, it) {
+      let it_errors =
+        case it {
+          OrUni(_) -> Ok(Nil)
+          OrRange(v) -> common.validate_range(v, field_def)
+          OrEvery(v) -> common.validate_every(v, field_def)
+          OrIndex(i, _) -> validate_index(i, field_def)
+          OrLast(_) -> Ok(Nil)
+        }
+        |> result.unwrap_error([])
+
+      list.append(acc, it_errors)
+    })
+
+  case list.is_empty(fold_errors) {
+    True -> Ok(Nil)
+    False -> Error(fold_errors)
+  }
 }

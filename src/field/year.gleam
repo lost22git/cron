@@ -1,10 +1,12 @@
 import gleam/int
 import gleam/list
 import gleam/result.{try}
-import field/types.{
-  type EveryVal, type OrVal, type RangeVal, EveryAll, EveryRange, EveryUni,
-  OrEvery, OrRange, OrUni, RangeVal,
+import gleam/option.{None}
+import field/common.{
+  type EveryVal, type FieldDef, type OrVal, type RangeVal, EveryAll, EveryRange,
+  EveryUni, FieldDef, OrEvery, OrRange, OrUni, RangeVal,
 }
+import util/range
 
 pub type FieldVal {
   // ?
@@ -33,9 +35,9 @@ pub fn to_s(d: FieldVal) -> String {
     Any -> "?"
     All -> "*"
     Uni(v) -> int.to_string(v)
-    Range(v) -> types.range_to_s(v, int.to_string)
-    Every(v) -> types.every_to_s(v, int.to_string)
-    Or(v) -> types.or_to_s(v, int.to_string)
+    Range(v) -> common.to_s_range(v, int.to_string)
+    Every(v) -> common.to_s_every(v, int.to_string)
+    Or(v) -> common.to_s_or(v, int.to_string)
   }
 }
 
@@ -108,4 +110,32 @@ pub fn or(fvals: List(FieldVal)) -> Result(FieldVal, String) {
     }),
   )
   Ok(Or(or_vals))
+}
+
+/// get `FieldDef`
+///
+pub fn get_field_def() -> FieldDef(Int) {
+  FieldDef(
+    value_range: range.close_close(2022, 2222),
+    value_compare: int.compare,
+    value_to_s: int.to_string,
+    every_step_range: range.close_close(1, 100),
+    index_range: None,
+    last_range: None,
+  )
+}
+
+/// validate `FieldVal`
+/// 
+pub fn validate(field_val: FieldVal) -> Result(FieldVal, List(String)) {
+  let field_def = get_field_def()
+  case field_val {
+    All | Any -> Ok(Nil)
+    Uni(v) -> common.validate_uni(v, field_def)
+    Range(v) -> common.validate_range(v, field_def)
+    Every(v) -> common.validate_every(v, field_def)
+    Or(v) -> common.validate_or(v, field_def)
+  }
+  |> result.map(fn(_) { field_val })
+  |> result.map_error(fn(errors) { [to_s(field_val), ..errors] })
 }

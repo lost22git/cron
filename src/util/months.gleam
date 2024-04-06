@@ -2,6 +2,7 @@ import gleam/int
 import gleam/list
 import gleam/string
 import gleam/order.{type Order}
+import util/range
 
 pub opaque type Month {
   MonthNumber(value: Int)
@@ -15,10 +16,18 @@ pub const names = [
   "DEC",
 ]
 
-/// get `#(min, max)` of `Month`
+/// get `Range` of `Month`
 ///
-pub fn int_range() -> #(Int, Int) {
-  #(1, list.length(names))
+pub fn range() -> range.Range(Month) {
+  let assert Ok(from) = from_int(1)
+  let assert Ok(to) = from_int(list.length(names))
+  range.close_close(from, to)
+}
+
+/// get int `Range` of `Month`
+///
+pub fn int_range() -> range.Range(Int) {
+  range.close_close(1, list.length(names))
 }
 
 /// `Month` to string
@@ -56,14 +65,17 @@ pub fn to_s(d: Month) -> String {
 /// | 12 | DEC |
 ///
 pub fn from_int(value: Int) -> Result(Month, String) {
-  let #(min, max) = int_range()
-  case min <= value, value <= max {
-    True, True -> Ok(MonthNumber(value))
-    _, _ -> {
-      let range_str =
-        "[" <> int.to_string(min) <> "," <> int.to_string(max) <> "]"
-      Error("`" <> int.to_string(value) <> "`" <> " must in " <> range_str)
-    }
+  let r = int_range()
+  case range.include(r, value, int.compare) {
+    True -> Ok(MonthNumber(value))
+    _ ->
+      Error(
+        "`"
+        <> int.to_string(value)
+        <> "`"
+        <> " must in "
+        <> range.to_s(r, int.to_string),
+      )
   }
 }
 
