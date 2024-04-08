@@ -3,7 +3,7 @@
 [![Package Version](https://img.shields.io/hexpm/v/cron)](https://hex.pm/packages/cron)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/cron/)
 
-✨ cron expression for gleam
+✨ cron expression lib for gleam
 
 ```sh
 gleam add cron
