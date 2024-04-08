@@ -4,8 +4,8 @@ import gleam/int
 import gleam/result.{try}
 import gleam/list
 import gleam/string
-import gleam/string_builder
 import util/range.{type Range}
+import util/str
 
 pub type ExprKind {
   AllExpr
@@ -46,7 +46,7 @@ pub type FieldDef(a) {
 }
 
 pub type FieldVal(a) {
-  FieldVal(expr_val: ExprVal(a), field_def: FieldDef(a))
+  FieldVal(expr_val: ExprVal(a), def: FieldDef(a))
 }
 
 pub type ExprVal(a) {
@@ -87,7 +87,7 @@ pub type ExprVal(a) {
 /// `FieldVal` to string
 ///
 pub fn to_s(field_val: FieldVal(a)) -> String {
-  to_s_expr_val(field_val.expr_val, field_val.field_def)
+  to_s_expr_val(field_val.expr_val, field_val.def)
 }
 
 fn to_s_expr_val(expr_val: ExprVal(a), def: FieldDef(a)) -> String {
@@ -125,7 +125,7 @@ pub fn get_expr_kind(expr_val: ExprVal(a)) -> ExprKind {
 /// validate `FieldVal`
 ///
 pub fn validate(field_val: FieldVal(a)) -> Result(FieldVal(a), List(String)) {
-  validate_expr_val(field_val.expr_val, field_val.field_def)
+  validate_expr_val(field_val.expr_val, field_val.def)
   |> result.map(fn(_) { field_val })
 }
 
@@ -278,57 +278,44 @@ fn validate_expr_val(
   }
 }
 
-fn remove_whitespace(s: String) -> String {
-  string_builder.from_string(s)
-  |> string_builder.replace(" ", "")
-  |> string_builder.replace("\t", "")
-  |> string_builder.to_string()
-}
-
 /// parse string as `FieldVal`
 /// 
-pub fn from_s(
-  s: String,
-  field_def: FieldDef(a),
-) -> Result(FieldVal(a), List(String)) {
+pub fn from_s(s: String, def: FieldDef(a)) -> Result(FieldVal(a), List(String)) {
   case string.split(s, ",") {
     [first] ->
-      from_s_inner(remove_whitespace(first), field_def)
-      |> result.map(FieldVal(_, field_def))
+      from_s_inner(str.remove_whitespaces(first), def)
+      |> result.map(FieldVal(_, def))
 
     _ as items -> {
       list.try_map(items, fn(it) {
-        from_s_inner(remove_whitespace(it), field_def)
+        from_s_inner(str.remove_whitespaces(it), def)
       })
       |> result.map(Or(_))
-      |> result.map(FieldVal(_, field_def))
+      |> result.map(FieldVal(_, def))
     }
   }
 }
 
-fn from_s_inner(
-  s: String,
-  field_def: FieldDef(a),
-) -> Result(ExprVal(a), List(String)) {
+fn from_s_inner(s: String, def: FieldDef(a)) -> Result(ExprVal(a), List(String)) {
   case s {
     "*" -> Ok(All)
     "?" -> Ok(Any)
-    _ -> from_s_inner2(s, field_def)
+    _ -> from_s_inner2(s, def)
   }
 }
 
 fn from_s_inner2(
   s: String,
-  field_def: FieldDef(a),
+  def: FieldDef(a),
 ) -> Result(ExprVal(a), List(String)) {
   let common_error = "Invalid expr: " <> s
 
   case string.split(s, "#") {
-    [_] -> from_s_inner3(s, field_def)
+    [_] -> from_s_inner3(s, def)
 
     // 1#1
     [v, i] -> {
-      use value <- try(field_def.value_from_s(v))
+      use value <- try(def.value_from_s(v))
       use index <- try(
         int.parse(i)
         |> result.replace_error([common_error]),
@@ -342,16 +329,16 @@ fn from_s_inner2(
 
 fn from_s_inner3(
   s: String,
-  field_def: FieldDef(a),
+  def: FieldDef(a),
 ) -> Result(ExprVal(a), List(String)) {
   let common_error = "Invalid expr: " <> s
 
   case string.split(s, "L") {
-    [_] -> from_s_inner4(s, field_def)
+    [_] -> from_s_inner4(s, def)
 
     // "L"
     ["", ""] -> {
-      case field_def.field_name {
+      case def.field_name {
         DayOfWeek -> Ok(LastDayOfWeek(None))
         DayOfMonth -> Ok(LastDayOfMonth(None))
         _ -> Error([common_error])
@@ -360,7 +347,7 @@ fn from_s_inner3(
 
     // "1L"
     [v, ""] -> {
-      use value <- try(field_def.value_from_s(v))
+      use value <- try(def.value_from_s(v))
       Ok(LastDayOfWeek(Some(value)))
     }
 
@@ -384,7 +371,7 @@ fn from_s_inner3(
 
 fn from_s_inner4(
   s: String,
-  field_def: FieldDef(a),
+  def: FieldDef(a),
 ) -> Result(ExprVal(a), List(String)) {
   let common_error = "Invalid expr: " <> s
 
@@ -393,14 +380,14 @@ fn from_s_inner4(
       case string.split(s, "-") {
         // 1
         [_] -> {
-          use value <- try(field_def.value_from_s(s))
+          use value <- try(def.value_from_s(s))
           Ok(Uni(value))
         }
 
         // 1-2
         [f, t] -> {
-          use from <- try(field_def.value_from_s(f))
-          use to <- try(field_def.value_from_s(t))
+          use from <- try(def.value_from_s(f))
+          use to <- try(def.value_from_s(t))
           Ok(Rng(from, to))
         }
 
@@ -408,7 +395,7 @@ fn from_s_inner4(
       }
 
     [inner, step] -> {
-      use inner_expr <- try(from_s_inner(inner, field_def))
+      use inner_expr <- try(from_s_inner(inner, def))
       use step_int <- try(
         int.parse(step)
         |> result.replace_error([common_error]),
