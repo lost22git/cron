@@ -1,9 +1,10 @@
 import gleam/option.{type Option, None, Some}
 import gleam/order.{type Order, Eq, Lt}
 import gleam/int
-import gleam/result
+import gleam/result.{try}
 import gleam/list
 import gleam/string
+import gleam/string_builder
 import util/range.{type Range}
 
 pub type ExprKind {
@@ -18,14 +19,26 @@ pub type ExprKind {
   LastDayOfMonthExpr
 }
 
+pub type FieldName {
+  Second
+  Minute
+  Hour
+  DayOfMonth
+  Month
+  DayOfWeek
+  Year
+}
+
 pub type FieldDef(a) {
   FieldDef(
+    field_name: FieldName,
     expr_kinds: List(ExprKind),
     expr_kinds_in_every: List(ExprKind),
     expr_kinds_in_or: List(ExprKind),
     value_range: Range(a),
     value_compare: fn(a, a) -> Order,
     value_to_s: fn(a) -> String,
+    value_from_s: fn(String) -> Result(a, List(String)),
     step_range: Range(Int),
     index_range: Option(Range(Int)),
     last_offset_range: Option(Range(Int)),
@@ -262,5 +275,147 @@ fn validate_expr_val(
             }
           }
       }
+  }
+}
+
+fn remove_whitespace(s: String) -> String {
+  string_builder.from_string(s)
+  |> string_builder.replace(" ", "")
+  |> string_builder.replace("\t", "")
+  |> string_builder.to_string()
+}
+
+/// parse string as `FieldVal`
+/// 
+pub fn from_s(
+  s: String,
+  field_def: FieldDef(a),
+) -> Result(FieldVal(a), List(String)) {
+  case string.split(s, ",") {
+    [first] ->
+      from_s_inner(remove_whitespace(first), field_def)
+      |> result.map(FieldVal(_, field_def))
+
+    _ as items -> {
+      list.try_map(items, fn(it) {
+        from_s_inner(remove_whitespace(it), field_def)
+      })
+      |> result.map(Or(_))
+      |> result.map(FieldVal(_, field_def))
+    }
+  }
+}
+
+fn from_s_inner(
+  s: String,
+  field_def: FieldDef(a),
+) -> Result(ExprVal(a), List(String)) {
+  case s {
+    "*" -> Ok(All)
+    "?" -> Ok(Any)
+    _ -> from_s_inner2(s, field_def)
+  }
+}
+
+fn from_s_inner2(
+  s: String,
+  field_def: FieldDef(a),
+) -> Result(ExprVal(a), List(String)) {
+  let common_error = "Invalid expr: " <> s
+
+  case string.split(s, "#") {
+    [_] -> from_s_inner3(s, field_def)
+
+    // 1#1
+    [v, i] -> {
+      use value <- try(field_def.value_from_s(v))
+      use index <- try(
+        int.parse(i)
+        |> result.replace_error([common_error]),
+      )
+      Ok(Index(value, index))
+    }
+
+    _ -> Error([common_error])
+  }
+}
+
+fn from_s_inner3(
+  s: String,
+  field_def: FieldDef(a),
+) -> Result(ExprVal(a), List(String)) {
+  let common_error = "Invalid expr: " <> s
+
+  case string.split(s, "L") {
+    [_] -> from_s_inner4(s, field_def)
+
+    // "L"
+    ["", ""] -> {
+      case field_def.field_name {
+        DayOfWeek -> Ok(LastDayOfWeek(None))
+        DayOfMonth -> Ok(LastDayOfMonth(None))
+        _ -> Error([common_error])
+      }
+    }
+
+    // "1L"
+    [v, ""] -> {
+      use value <- try(field_def.value_from_s(v))
+      Ok(LastDayOfWeek(Some(value)))
+    }
+
+    // "L-1"
+    ["", v] -> {
+      case string.split(v, "-") {
+        ["", offset] -> {
+          use offset_int <- try(
+            int.parse(offset)
+            |> result.replace_error([common_error]),
+          )
+          Ok(LastDayOfMonth(Some(offset_int)))
+        }
+        _ -> Error([common_error])
+      }
+    }
+
+    _ -> Error([common_error])
+  }
+}
+
+fn from_s_inner4(
+  s: String,
+  field_def: FieldDef(a),
+) -> Result(ExprVal(a), List(String)) {
+  let common_error = "Invalid expr: " <> s
+
+  case string.split(s, "/") {
+    [_] ->
+      case string.split(s, "-") {
+        // 1
+        [_] -> {
+          use value <- try(field_def.value_from_s(s))
+          Ok(Uni(value))
+        }
+
+        // 1-2
+        [f, t] -> {
+          use from <- try(field_def.value_from_s(f))
+          use to <- try(field_def.value_from_s(t))
+          Ok(Rng(from, to))
+        }
+
+        _ -> Error([common_error])
+      }
+
+    [inner, step] -> {
+      use inner_expr <- try(from_s_inner(inner, field_def))
+      use step_int <- try(
+        int.parse(step)
+        |> result.replace_error([common_error]),
+      )
+      Ok(Every(inner_expr, step_int))
+    }
+
+    _ -> Error([common_error])
   }
 }
