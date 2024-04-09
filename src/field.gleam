@@ -10,13 +10,48 @@ import util/str
 pub type ExprKind {
   AllExpr
   AnyExpr
-  UniExpr
+  AtExpr
   RngExpr
   EveryExpr
   OrExpr
   IndexExpr
   LastDayOfWeekExpr
   LastDayOfMonthExpr
+}
+
+pub type ExprVal(a) {
+  // *
+  All
+
+  // ?
+  Any
+
+  // 1
+  At(value: a)
+
+  // 1-4
+  Rng(from: a, to: a)
+
+  // */2
+  // 1/2
+  // 1-4/2
+  Every(value: ExprVal(a), step: Int)
+
+  // 1,2
+  // 1,1/2
+  // 1,1/2,1-4/2
+  Or(value: List(ExprVal(a)))
+
+  // 1#1 for dayofweek
+  Index(value: a, index: Int)
+
+  // L
+  // 1L for dayofweek
+  LastDayOfWeek(value: Option(a))
+
+  // L
+  // L-1 for dayofmonth
+  LastDayOfMonth(value: Option(Int))
 }
 
 pub type FieldName {
@@ -49,41 +84,6 @@ pub type FieldVal(a) {
   FieldVal(expr_val: ExprVal(a), def: FieldDef(a))
 }
 
-pub type ExprVal(a) {
-  // *
-  All
-
-  // ?
-  Any
-
-  // 1
-  Uni(value: a)
-
-  // 1-4
-  Rng(from: a, to: a)
-
-  // */2
-  // 1/2
-  // 1-4/2
-  Every(value: ExprVal(a), step: Int)
-
-  // 1,2
-  // 1,1/2
-  // 1,1/2,1-4/2
-  Or(value: List(ExprVal(a)))
-
-  // 1#1 for dayofweek
-  Index(value: a, index: Int)
-
-  // L
-  // 1L for dayofweek
-  LastDayOfWeek(value: Option(a))
-
-  // L
-  // L-1 for dayofmonth
-  LastDayOfMonth(value: Option(Int))
-}
-
 /// `FieldVal` to string
 ///
 pub fn to_s(field_val: FieldVal(a)) -> String {
@@ -94,7 +94,7 @@ fn to_s_expr_val(expr_val: ExprVal(a), def: FieldDef(a)) -> String {
   case expr_val {
     All -> "*"
     Any -> "?"
-    Uni(val) -> def.value_to_s(val)
+    At(val) -> def.value_to_s(val)
     Rng(from, to) -> def.value_to_s(from) <> "-" <> def.value_to_s(to)
     Every(val, step) -> to_s_expr_val(val, def) <> "/" <> int.to_string(step)
     Or(val) -> string.join(list.map(val, to_s_expr_val(_, def)), ",")
@@ -112,7 +112,7 @@ pub fn get_expr_kind(expr_val: ExprVal(a)) -> ExprKind {
   case expr_val {
     All -> AllExpr
     Any -> AnyExpr
-    Uni(_) -> UniExpr
+    At(_) -> AtExpr
     Rng(_, _) -> RngExpr
     Every(_, _) -> EveryExpr
     Or(_) -> OrExpr
@@ -144,15 +144,15 @@ fn validate_expr_val(
         True -> Ok(Nil)
         False -> Error(["AnyExpr `?` is not allowed in the field"])
       }
-    Uni(val) -> {
-      case list.contains(def.expr_kinds, UniExpr) {
-        False -> Error(["UniExpr is not allowed in the field"])
+    At(val) -> {
+      case list.contains(def.expr_kinds, AtExpr) {
+        False -> Error(["AtExpr is not allowed in the field"])
         True -> {
           case range.include(def.value_range, val, def.value_compare) {
             True -> Ok(Nil)
             False ->
               Error([
-                "UniExpr value must be in "
+                "AtExpr value must be in "
                 <> range.to_s(def.value_range, def.value_to_s),
               ])
           }
@@ -296,6 +296,9 @@ pub fn from_s(s: String, def: FieldDef(a)) -> Result(FieldVal(a), List(String)) 
   }
 }
 
+/// All `*`
+/// Any `?`
+///
 fn from_s_inner(s: String, def: FieldDef(a)) -> Result(ExprVal(a), List(String)) {
   case s {
     "*" -> Ok(All)
@@ -304,6 +307,8 @@ fn from_s_inner(s: String, def: FieldDef(a)) -> Result(ExprVal(a), List(String))
   }
 }
 
+/// Index `#`
+///
 fn from_s_inner2(
   s: String,
   def: FieldDef(a),
@@ -327,6 +332,8 @@ fn from_s_inner2(
   }
 }
 
+/// Last `L`
+/// 
 fn from_s_inner3(
   s: String,
   def: FieldDef(a),
@@ -369,6 +376,10 @@ fn from_s_inner3(
   }
 }
 
+/// Every `/` 
+/// Rng `-`
+/// At
+///
 fn from_s_inner4(
   s: String,
   def: FieldDef(a),
@@ -381,7 +392,7 @@ fn from_s_inner4(
         // 1
         [_] -> {
           use value <- try(def.value_from_s(s))
-          Ok(Uni(value))
+          Ok(At(value))
         }
 
         // 1-2
