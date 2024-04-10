@@ -1,4 +1,6 @@
 import gleam/order.{type Order, Eq, Lt}
+import gleam/iterator.{type Iterator, type Step, Done, Next}
+import gleam/option.{type Option, None, Some}
 
 pub type Range(a) {
   Range(begin: a, end: a, close_begin: Bool, close_end: Bool)
@@ -97,5 +99,67 @@ pub fn to_s(range: Range(a), f: fn(a) -> String) -> String {
     True, False -> "[" <> f(range.begin) <> "," <> f(range.end) <> ")"
     False, False -> "(" <> f(range.begin) <> "," <> f(range.end) <> ")"
     False, True -> "(" <> f(range.begin) <> "," <> f(range.end) <> "]"
+  }
+}
+
+/// convert `Range` to iterator
+///
+pub fn iterator(
+  range: Range(a),
+  next_fn: fn(a) -> Option(a),
+  compare_fn: fn(a, a) -> Order,
+) -> Iterator(a) {
+  case range.close_begin, range.close_end {
+    True, True ->
+      iterator.unfold(Some(range.begin), unfold_with(_, next_fn))
+      |> iterator.take_while(fn(it) {
+        compare_fn(it, range.end)
+        |> is_le()
+      })
+
+    False, True ->
+      iterator.unfold(next_fn(range.begin), unfold_with(_, next_fn))
+      |> iterator.take_while(fn(it) {
+        compare_fn(it, range.end)
+        |> is_le()
+      })
+
+    False, False ->
+      iterator.unfold(next_fn(range.begin), unfold_with(_, next_fn))
+      |> iterator.take_while(fn(it) {
+        compare_fn(it, range.end)
+        |> is_lt()
+      })
+
+    True, False ->
+      iterator.unfold(Some(range.begin), unfold_with(_, next_fn))
+      |> iterator.take_while(fn(it) {
+        compare_fn(it, range.end)
+        |> is_lt()
+      })
+  }
+}
+
+fn unfold_with(
+  cur_option: Option(a),
+  next_fn: fn(a) -> Option(a),
+) -> Step(a, Option(a)) {
+  case cur_option {
+    Some(v) -> Next(v, next_fn(v))
+    None -> Done
+  }
+}
+
+fn is_lt(order: Order) -> Bool {
+  case order {
+    Lt -> True
+    _ -> False
+  }
+}
+
+fn is_le(order: Order) -> Bool {
+  case order {
+    Lt | Eq -> True
+    _ -> False
   }
 }

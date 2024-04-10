@@ -2,6 +2,7 @@ import gleam/int
 import gleam/string
 import gleam/list
 import gleam/order.{type Order}
+import gleam/option.{type Option, None, Some}
 import util/range
 
 pub opaque type Weekday {
@@ -25,23 +26,6 @@ pub fn range() -> range.Range(Weekday) {
 ///
 pub fn int_range() -> range.Range(Int) {
   range.close_close(1, list.length(names))
-}
-
-/// `Weekday` to string
-///
-/// ```gleam
-/// let weekday = from_int(1) 
-/// to_s(weekday) // "1"
-/// ```
-/// ```gleam
-/// let weekday = from_str("SUN")
-/// to_s(weekday) // "SUN"
-/// ```
-pub fn to_s(d: Weekday) -> String {
-  case d {
-    WeekdayNumber(value) -> int.to_string(value)
-    WeekdayName(value) -> value
-  }
 }
 
 /// create `Weekday` from a int value
@@ -118,8 +102,34 @@ pub fn to_name(d: Weekday) -> String {
   }
 }
 
+/// `Weekday` to string
+///
+/// ```gleam
+/// let weekday = from_int(1) 
+/// to_s(weekday) // "1"
+/// ```
+/// ```gleam
+/// let weekday = from_str("SUN")
+/// to_s(weekday) // "SUN"
+/// ```
+pub fn to_s(d: Weekday) -> String {
+  case d {
+    WeekdayNumber(value) -> int.to_string(value)
+    WeekdayName(value) -> value
+  }
+}
+
 /// compare two `Weekday`
 ///
 pub fn compare(a: Weekday, b: Weekday) -> Order {
   int.compare(to_int(a), to_int(b))
+}
+
+/// get next `Weekday`
+///
+pub fn next(a: Weekday) -> Option(Weekday) {
+  case from_int(to_int(a) + 1) {
+    Ok(v) -> Some(v)
+    Error(_) -> None
+  }
 }

@@ -2,6 +2,7 @@ import gleam/int
 import gleam/list
 import gleam/string
 import gleam/order.{type Order}
+import gleam/option.{type Option, None, Some}
 import util/range
 
 pub opaque type Month {
@@ -28,23 +29,6 @@ pub fn range() -> range.Range(Month) {
 ///
 pub fn int_range() -> range.Range(Int) {
   range.close_close(1, list.length(names))
-}
-
-/// `Month` to string
-///
-/// ```gleam
-/// let month = from_int(1) 
-/// to_s(month) // "1"
-/// ```
-/// ```gleam
-/// let month = from_str("JAN")
-/// to_s(month) // "JAN"
-/// ```
-pub fn to_s(d: Month) -> String {
-  case d {
-    MonthNumber(value) -> int.to_string(value)
-    MonthName(value) -> value
-  }
 }
 
 /// create `Month` from a int value
@@ -130,8 +114,34 @@ pub fn to_name(d: Month) -> String {
   }
 }
 
+/// `Month` to string
+///
+/// ```gleam
+/// let month = from_int(1) 
+/// to_s(month) // "1"
+/// ```
+/// ```gleam
+/// let month = from_str("JAN")
+/// to_s(month) // "JAN"
+/// ```
+pub fn to_s(d: Month) -> String {
+  case d {
+    MonthNumber(value) -> int.to_string(value)
+    MonthName(value) -> value
+  }
+}
+
 /// compare two `Month`
 ///
 pub fn compare(a: Month, b: Month) -> Order {
   int.compare(to_int(a), to_int(b))
+}
+
+/// get next `Month`
+///
+pub fn next(a: Month) -> Option(Month) {
+  case from_int(to_int(a) + 1) {
+    Ok(v) -> Some(v)
+    Error(_) -> None
+  }
 }

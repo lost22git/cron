@@ -2,6 +2,8 @@ import gleeunit
 import gleeunit/should
 import util/range
 import gleam/int
+import gleam/iterator
+import gleam/option.{type Option, Some}
 
 pub fn main() {
   gleeunit.main()
@@ -108,4 +110,26 @@ pub fn to_s_test() {
   range.open_close(1, 10)
   |> range.to_s(int.to_string)
   |> should.equal("(1,10]")
+}
+
+pub fn iterator_test() {
+  range.close_close(1, 3)
+  |> range.iterator(fn(a) { Some(int.add(a, 1)) }, int.compare)
+  |> iterator.to_list()
+  |> should.equal([1, 2, 3])
+
+  range.close_open(1, 3)
+  |> range.iterator(fn(a) { Some(int.add(a, 1)) }, int.compare)
+  |> iterator.to_list()
+  |> should.equal([1, 2])
+
+  range.open_open(1, 3)
+  |> range.iterator(fn(a) { Some(int.add(a, 1)) }, int.compare)
+  |> iterator.to_list()
+  |> should.equal([2])
+
+  range.open_close(1, 3)
+  |> range.iterator(fn(a) { Some(int.add(a, 1)) }, int.compare)
+  |> iterator.to_list()
+  |> should.equal([2, 3])
 }
