@@ -72,6 +72,7 @@ pub type FieldDef(a) {
     expr_kinds_in_or: List(ExprKind),
     value_range: Range(a),
     value_compare: fn(a, a) -> Order,
+    value_next: fn(a) -> Option(a),
     value_to_s: fn(a) -> String,
     value_from_s: fn(String) -> Result(a, List(String)),
     step_range: Range(Int),
@@ -125,11 +126,11 @@ pub fn get_expr_kind(expr_val: ExprVal(a)) -> ExprKind {
 /// validate `FieldVal`
 ///
 pub fn validate(field_val: FieldVal(a)) -> Result(FieldVal(a), List(String)) {
-  validate_expr_val(field_val.expr_val, field_val.def)
+  validate_inner(field_val.expr_val, field_val.def)
   |> result.map(fn(_) { field_val })
 }
 
-fn validate_expr_val(
+fn validate_inner(
   expr_val: ExprVal(a),
   def: FieldDef(a),
 ) -> Result(Nil, List(String)) {
@@ -182,7 +183,7 @@ fn validate_expr_val(
               let inner_expr_val_kind = get_expr_kind(val)
               case list.contains(def.expr_kinds_in_every, inner_expr_val_kind) {
                 True ->
-                  validate_expr_val(val, def)
+                  validate_inner(val, def)
                   |> result.map_error(list.map(_, fn(e) {
                     "EveryExpr inner expr error: " <> e
                   }))
@@ -204,7 +205,7 @@ fn validate_expr_val(
             let inner_expr_val_kind = get_expr_kind(inner_expr_val)
             case list.contains(def.expr_kinds_in_or, inner_expr_val_kind) {
               True ->
-                validate_expr_val(inner_expr_val, def)
+                validate_inner(inner_expr_val, def)
                 |> result.map_error(list.map(_, fn(e) {
                   "OrExpr inner expr error: " <> e
                 }))
